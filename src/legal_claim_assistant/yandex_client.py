@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 class YandexGptLegalAnalyzer:
-    BASE_URL = "https://llm.api.cloud.yandex.net/foundationModels/v1"
+    BASE_URL = "https://llm.api.cloud.yandex.net/v1"
 
     def __init__(
         self,
@@ -107,6 +107,7 @@ class YandexGptLegalAnalyzer:
                         {"role": "system", "content": system},
                         {"role": "user", "content": user},
                     ],
+                    "max_tokens": 4000,
                 },
             )
         except httpx.TimeoutException as exc:
