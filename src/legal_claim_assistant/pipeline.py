@@ -17,6 +17,7 @@ from .models import ClaimContext, DocumentText
 from .ocr import TesseractOcr
 from .openai_client import OpenAiLegalAnalyzer
 from .readiness import build_readiness_report, validate_generated_claim
+from .yandex_client import YandexGptLegalAnalyzer
 from .reconciliation import apply_reconciliation_balance
 from .storage import CaseStorage
 
@@ -32,13 +33,22 @@ class ClaimPipeline:
             TesseractOcr(settings.tesseract_cmd, timeout_seconds=settings.ocr_timeout_seconds),
             ocr_enabled=settings.ocr_enabled,
         )
-        self.ai = OpenAiLegalAnalyzer(
-            settings.openai_api_key,
-            settings.openai_model,
-            base_url=settings.openai_base_url,
-            timeout_seconds=settings.openai_timeout_seconds,
-            prompts_path=settings.prompts_file,
-        )
+        if settings.llm_provider == "yandex":
+            self.ai = YandexGptLegalAnalyzer(
+                api_key=settings.yandex_api_key,
+                folder_id=settings.yandex_folder_id,
+                model=settings.yandex_model,
+                timeout_seconds=settings.openai_timeout_seconds,
+                prompts_path=settings.prompts_file,
+            )
+        else:
+            self.ai = OpenAiLegalAnalyzer(
+                settings.openai_api_key,
+                settings.openai_model,
+                base_url=settings.openai_base_url,
+                timeout_seconds=settings.openai_timeout_seconds,
+                prompts_path=settings.prompts_file,
+            )
         self.courts = CourtResolver(settings.courts_file)
 
     def run(self, input_paths: list[Path], case_name: str | None = None, progress: ProgressCallback | None = None) -> Path:

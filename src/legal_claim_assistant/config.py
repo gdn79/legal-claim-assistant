@@ -13,10 +13,14 @@ except ModuleNotFoundError:
 
 @dataclass(frozen=True)
 class Settings:
+    llm_provider: str
     openai_api_key: str
     openai_model: str
     openai_base_url: str | None
     openai_timeout_seconds: float
+    yandex_api_key: str
+    yandex_folder_id: str
+    yandex_model: str
     tesseract_cmd: str | None
     ocr_enabled: bool
     ocr_timeout_seconds: int
@@ -117,11 +121,16 @@ def load_settings() -> Settings:
     load_dotenv(override=True)
     root = Path.cwd()
     env_values = _read_simple_env(root / ".env")
+    provider = _env("LLM_PROVIDER", env_values, "openai").strip().lower()
     return Settings(
+        llm_provider=provider,
         openai_api_key=_env("OPENAI_API_KEY", env_values),
         openai_model=_env("OPENAI_MODEL", env_values, "gpt-4.1"),
         openai_base_url=_env("OPENAI_BASE_URL", env_values) or None,
         openai_timeout_seconds=_float_value(_env("OPENAI_TIMEOUT_SECONDS", env_values), 300.0),
+        yandex_api_key=_env("YANDEX_API_KEY", env_values),
+        yandex_folder_id=_env("YANDEX_FOLDER_ID", env_values),
+        yandex_model=_env("YANDEX_MODEL", env_values, "yandexgpt/latest"),
         tesseract_cmd=_default_tesseract_cmd(env_values),
         ocr_enabled=_bool_value(_env("OCR_ENABLED", env_values), True),
         ocr_timeout_seconds=_int_value(_env("OCR_TIMEOUT_SECONDS", env_values), 90),

@@ -32,9 +32,10 @@ copy .env.example .env
 
 ## Настройка .env
 
-Минимальный пример:
+Минимальный пример для OpenAI:
 
 ```env
+LLM_PROVIDER=openai
 OPENAI_API_KEY=sk-...
 OPENAI_MODEL=gpt-4.1
 OPENAI_BASE_URL=https://api.artemox.com/v1
@@ -52,9 +53,32 @@ RUSPROFILE_ENABLED=true
 RUSPROFILE_TIMEOUT_SECONDS=15
 ```
 
+Минимальный пример для Yandex GPT:
+
+```env
+LLM_PROVIDER=yandex
+YANDEX_API_KEY=...
+YANDEX_FOLDER_ID=b1g...
+YANDEX_MODEL=yandexgpt/latest
+OPENAI_TIMEOUT_SECONDS=120
+
+TESSERACT_CMD=C:\Program Files\Tesseract-OCR\tesseract.exe
+OCR_ENABLED=true
+OCR_TIMEOUT_SECONDS=90
+
+CASES_DIR=data/cases
+TRAINING_DIR=data/training
+COURTS_FILE=data/references/arbitration_courts_ru.json
+PROMPTS_FILE=data/prompts.json
+RUSPROFILE_ENABLED=true
+RUSPROFILE_TIMEOUT_SECONDS=15
+```
+
 Для Artemox используйте базовый URL `https://api.artemox.com/v1`. Клиент отправляет запросы через совместимый endpoint `/v1/chat/completions`.
 
 Если используется обычный OpenAI API, `OPENAI_BASE_URL` можно оставить пустым или удалить.
+
+Если используется Yandex GPT, установите `LLM_PROVIDER=yandex` и заполните `YANDEX_API_KEY` (API-ключ сервисного аккаунта Yandex Cloud) и `YANDEX_FOLDER_ID` (идентификатор каталога). Yandex GPT вызывается через OpenAI-совместимый endpoint `/foundationModels/v1/chat/completions`. Аутентификация — через заголовок `Authorization: Api-Key`.
 
 `RUSPROFILE_ENABLED=true` включает получение недостающих реквизитов компаний по ИНН через `https://www.rusprofile.ru/`. Если сайт недоступен, заблокировал запрос или не вернул карточку, пайплайн не падает: остаются данные из документов и ИИ-анализа.
 
