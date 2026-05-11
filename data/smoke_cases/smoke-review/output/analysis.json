@@ -1,0 +1,1 @@
+{"claim_type": "долг", "claimant": {"name": "Истец"}, "defendant": {"name": "Ответчик", "region": "Москва"}, "amounts": {"total": "100000"}, "contract": {"number": "1", "date": "01.01.2026", "subject": "услуги"}, "sufficiency": {"enough": false, "missing": ["претензия"]}}

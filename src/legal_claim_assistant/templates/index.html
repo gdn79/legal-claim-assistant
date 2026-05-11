@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Подготовка арбитражного иска</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark">§</div>
+          <div>
+            <div class="brand-title">Иск в арбитраж</div>
+            <div class="brand-subtitle">браузерная версия</div>
+          </div>
+        </div>
+
+        <nav class="steps" aria-label="Этапы обработки" id="processSteps" data-initial-step="{{ 4 if summary else (3 if analysis else 1) }}" data-initial-state="{{ 'completed' if summary else ('completed' if analysis else ('failed' if error else 'idle')) }}">
+          <a class="step active" href="/bot" data-process-step="1">
+            <span class="step-number">1</span>
+            <span><strong>Загрузка</strong><small>Файлы и вводные</small></span>
+          </a>
+          <div class="step {{ 'active' if analysis else '' }}" data-process-step="2">
+            <span class="step-number">2</span>
+            <span><strong>Анализ</strong><small>OCR и OpenAI</small></span>
+          </div>
+          <div class="step {{ 'active' if summary else '' }}" data-process-step="3">
+            <span class="step-number">3</span>
+            <span><strong>Проверка</strong><small>Стороны и суммы</small></span>
+          </div>
+          <div class="step {{ 'active' if summary else '' }}" data-process-step="4">
+            <span class="step-number">4</span>
+            <span><strong>Иск</strong><small>DOCX и контроль</small></span>
+          </div>
+          <a class="step" href="/prompts">
+            <span class="step-number">5</span>
+            <span><strong>Промпты</strong><small>Настройка ИИ</small></span>
+          </a>
+        </nav>
+
+      </aside>
+
+      <main class="workspace">
+        <header class="topbar">
+          <div>
+            <h1>Подготовка арбитражного иска</h1>
+            <p>Сначала программа собирает карточку дела и показывает риски. DOCX формируется только после вашей проверки данных.</p>
+          </div>
+          <div class="topbar-actions">
+            <a class="ghost-button" href="/prompts">Редактировать промпты</a>
+            <button class="ghost-button" type="button" id="howButton">Как работает</button>
+          </div>
+        </header>
+
+        {% if error %}
+          <div class="alert" role="alert">{{ error }}</div>
+        {% endif %}
+
+        <section class="chat-flow" aria-label="Рабочий сценарий подготовки иска">
+          <div class="message-row">
+            <div class="avatar">§</div>
+            <div class="message">
+              Загрузите документы по делу. Я извлеку текст, соберу карточку иска, проверю комплектность, рассчитаю госпошлину и покажу, что нужно исправить до формирования DOCX.
+            </div>
+          </div>
+
+          <div class="workflow-strip" aria-label="Порядок работы">
+            <div><b>1</b><span>Загрузите документы</span></div>
+            <div><b>2</b><span>Проверьте карточку дела</span></div>
+            <div><b>3</b><span>Исправьте риски и пробелы</span></div>
+            <div><b>4</b><span>Сформируйте и скачайте DOCX</span></div>
+          </div>
+
+          <form class="upload-form" method="post" action="/cases" enctype="multipart/form-data" id="caseForm">
+            <div class="user-bubble">
+              <label class="field-label" for="case_name">Название дела</label>
+              <input class="text-input" id="case_name" name="case_name" value="Долг по договору" autocomplete="off">
+
+              <div class="upload-zone" id="uploadZone">
+                <input id="documents" name="documents" type="file" accept=".pdf,.doc,.docx,.xlsx,.xls" multiple required>
+                <div class="upload-icon" aria-hidden="true">↑</div>
+                <strong>Перетащите документы сюда или выберите файлы</strong>
+                <span>Поддерживаются PDF, DOCX и XLSX. Для 95-100% готовности обычно нужны договор, закрывающие документы, платежи, претензия и доказательство отправки.</span>
+                <button class="primary-button" type="button" id="pickFiles">Выбрать файлы</button>
+              </div>
+
+              <div class="file-list" id="fileList" aria-live="polite"></div>
+              <div class="next-step" id="nextStep" hidden>
+                Файл выбран. Теперь нажмите «Начать анализ».
+              </div>
+              <button class="primary-button inline-submit" type="submit">Начать анализ</button>
+            </div>
+
+            <div class="message-row compact">
+              <div class="avatar">§</div>
+              <div class="checklist">
+                <div class="checklist-title">Что лучше загрузить сразу</div>
+                <div class="check-row"><span>Договор</span><b class="required">обязательно</b></div>
+                <div class="check-row"><span>Акты, накладные или УПД</span><b class="required">обязательно</b></div>
+                <div class="check-row"><span>Расчет задолженности, процентов, неустойки</span><b>желательно</b></div>
+                <div class="check-row"><span>Претензия и доказательства отправки</span><b>желательно</b></div>
+                <div class="check-row"><span>Платежные документы и акт сверки</span><b>по ситуации</b></div>
+              </div>
+            </div>
+
+            <div class="processing-card" id="processingCard" hidden>
+              <div class="spinner" aria-hidden="true"></div>
+              <div>
+                <strong id="processingTitle">Идет обработка</strong>
+                <span id="processingText">Не закрывайте страницу. Сканированные PDF могут занять больше времени из-за OCR.</span>
+              </div>
+            </div>
+
+          </form>
+
+          {% if analysis and not summary %}
+            <section class="result-panel review-panel">
+              <div class="review-head">
+                <div>
+                  <h2>Проверка анализа перед генерацией иска</h2>
+                  <p>Проверьте карточку. Именно эти данные будут переданы в промпт и попадут в иск.</p>
+                </div>
+                <div class="readiness-badge">{{ review.readiness_percent if review else 0 }}%</div>
+              </div>
+
+              {% if review and review.checklist %}
+                <div class="readiness-panel">
+                  {% for item in review.checklist %}
+                    <div class="readiness-item {{ item.status }}">
+                      <strong>{{ item.title }}</strong>
+                      <span>{{ item.note }}</span>
+                      <b>{{ item.score }}/{{ item.max_score }}</b>
+                    </div>
+                  {% endfor %}
+                </div>
+              {% endif %}
+
+              <form method="post" action="/cases/{{ review.case_id if review else '' }}/generate" data-generate-job-action="/cases/{{ review.case_id if review else '' }}/generate/jobs" class="review-form" id="reviewForm">
+                <h3>1. Модель дела</h3>
+                <div class="review-grid">
+                  <label>
+                    <span>Тип спора</span>
+                    <input class="text-input" name="claim_type" value="{{ analysis.claim_type or '' }}">
+                  </label>
+                  <label>
+                    <span>Модель иска</span>
+                    <select class="text-input" name="claim_scenario_code">
+                      {% for code, label in scenario_labels.items() %}
+                        <option value="{{ code }}" {{ 'selected' if analysis.claim_scenario and analysis.claim_scenario.code == code else '' }}>{{ label }}</option>
+                      {% endfor %}
+                    </select>
+                  </label>
+                  <label class="full">
+                    <span>Почему выбрана эта модель</span>
+                    <input class="text-input" name="claim_scenario_reason" value="{{ analysis.claim_scenario.reason if analysis.claim_scenario else '' }}">
+                  </label>
+                  <label>
+                    <span>Номер договора</span>
+                    <input class="text-input" name="contract_number" value="{{ analysis.contract.number if analysis.contract else '' }}">
+                  </label>
+                  <label>
+                    <span>Дата договора</span>
+                    <input class="text-input" name="contract_date" value="{{ analysis.contract.date if analysis.contract else '' }}">
+                  </label>
+                  <label class="full">
+                    <span>Предмет договора</span>
+                    <input class="text-input" name="contract_subject" value="{{ analysis.contract.subject if analysis.contract else '' }}">
+                  </label>
+                </div>
+
+                <h3>2. Истец</h3>
+                <div class="review-grid">
+                  <label class="full"><span>Название</span><input class="text-input" name="claimant_name" value="{{ analysis.claimant.name if analysis.claimant else '' }}"></label>
+                  <label><span>ИНН</span><input class="text-input" name="claimant_inn" value="{{ analysis.claimant.inn if analysis.claimant else '' }}"></label>
+                  <label><span>ОГРН</span><input class="text-input" name="claimant_ogrn" value="{{ analysis.claimant.ogrn if analysis.claimant else '' }}"></label>
+                  <label><span>КПП</span><input class="text-input" name="claimant_kpp" value="{{ analysis.claimant.kpp if analysis.claimant else '' }}"></label>
+                  <label><span>Руководитель</span><input class="text-input" name="claimant_representative" value="{{ analysis.claimant.representative if analysis.claimant else '' }}"></label>
+                  <label class="full"><span>Адрес</span><input class="text-input" name="claimant_address" value="{{ analysis.claimant.address if analysis.claimant else '' }}"></label>
+                </div>
+
+                <h3>3. Ответчик</h3>
+                <div class="review-grid">
+                  <label class="full"><span>Название</span><input class="text-input" name="defendant_name" value="{{ analysis.defendant.name if analysis.defendant else '' }}"></label>
+                  <label><span>ИНН</span><input class="text-input" name="defendant_inn" value="{{ analysis.defendant.inn if analysis.defendant else '' }}"></label>
+                  <label><span>ОГРН</span><input class="text-input" name="defendant_ogrn" value="{{ analysis.defendant.ogrn if analysis.defendant else '' }}"></label>
+                  <label><span>КПП</span><input class="text-input" name="defendant_kpp" value="{{ analysis.defendant.kpp if analysis.defendant else '' }}"></label>
+                  <label><span>Руководитель</span><input class="text-input" name="defendant_representative" value="{{ analysis.defendant.representative if analysis.defendant else '' }}"></label>
+                  <label><span>Регион</span><input class="text-input" name="defendant_region" value="{{ analysis.defendant.region if analysis.defendant else '' }}"></label>
+                  <label class="full"><span>Адрес</span><input class="text-input" name="defendant_address" value="{{ analysis.defendant.address if analysis.defendant else '' }}"></label>
+                </div>
+
+                <h3>4. Суммы</h3>
+                <div class="review-grid">
+                  <label><span>Основной долг</span><input class="text-input" name="amount_principal_debt" value="{{ analysis.amounts.principal_debt if analysis.amounts else '' }}"></label>
+                  <label><span>Неустойка</span><input class="text-input" name="amount_penalty" value="{{ analysis.amounts.penalty if analysis.amounts else '' }}"></label>
+                  <label><span>Проценты 395 ГК</span><input class="text-input" name="amount_interest_395" value="{{ analysis.amounts.interest_395 if analysis.amounts else '' }}"></label>
+                  <label><span>Прочее</span><input class="text-input" name="amount_other" value="{{ analysis.amounts.other if analysis.amounts else '' }}"></label>
+                  <label><span>Итого цена иска</span><input class="text-input" name="amount_total" value="{{ analysis.amounts.total if analysis.amounts else '' }}"></label>
+                  <label><span>Госпошлина</span><input class="text-input" value="{{ review.state_duty_rub if review else '' }}" disabled></label>
+                </div>
+
+                <h3>4.1. Расчет процентов и неустойки</h3>
+                <div class="review-grid">
+                  {% set calc_input = analysis.claim_calculation_input if analysis.claim_calculation_input else {} %}
+                  {% set interest_input = calc_input.interest_395 if calc_input.interest_395 else {} %}
+                  {% set penalty_input = calc_input.penalty if calc_input.penalty else {} %}
+                  <label><span>395 ГК: сумма</span><input class="text-input" name="interest_395_principal" value="{{ interest_input.principal or (analysis.amounts.principal_debt if analysis.amounts else '') }}"></label>
+                  <label><span>395 ГК: дата начала</span><input class="text-input" name="interest_395_date_from" placeholder="дд.мм.гггг" value="{{ interest_input.date_from or '' }}"></label>
+                  <label><span>395 ГК: дата окончания</span><input class="text-input" name="interest_395_date_to" placeholder="дд.мм.гггг" value="{{ interest_input.date_to or '' }}"></label>
+                  <label><span>Неустойка: сумма</span><input class="text-input" name="penalty_principal" value="{{ penalty_input.principal or (analysis.amounts.principal_debt if analysis.amounts else '') }}"></label>
+                  <label><span>Неустойка: дата начала</span><input class="text-input" name="penalty_date_from" placeholder="дд.мм.гггг" value="{{ penalty_input.date_from or '' }}"></label>
+                  <label><span>Неустойка: дата окончания</span><input class="text-input" name="penalty_date_to" placeholder="дд.мм.гггг" value="{{ penalty_input.date_to or '' }}"></label>
+                  <label><span>Неустойка, % в день</span><input class="text-input" name="penalty_rate_percent_per_day" placeholder="например 0,1" value="{{ penalty_input.rate_percent_per_day or '' }}"></label>
+                </div>
+                {% if analysis.claim_calculation %}
+                  <div class="calc-note">
+                    <strong>Расчетная карточка:</strong>
+                    <span>Цена иска {{ analysis.claim_calculation.total }} руб.; госпошлина {{ analysis.claim_calculation.state_duty_rub }} руб.</span>
+                    {% if analysis.claim_calculation.warnings %}
+                      <ul>
+                        {% for item in analysis.claim_calculation.warnings %}
+                          <li>{{ item }}</li>
+                        {% endfor %}
+                      </ul>
+                    {% endif %}
+                  </div>
+                {% endif %}
+
+                <h3>5. Комплектность</h3>
+                <label class="checkbox-row">
+                  <input type="checkbox" name="enough_for_claim" value="true" {{ 'checked' if analysis.sufficiency and analysis.sufficiency.enough else '' }}>
+                  <span>Данных достаточно для проекта иска после моей проверки</span>
+                </label>
+                <label>
+                  <span>Что нужно дополнить</span>
+                  <textarea name="missing_items">{{ (analysis.sufficiency.missing if analysis.sufficiency else []) | join('\n') }}</textarea>
+                </label>
+
+                <div class="result-actions">
+                  <button class="primary-button" type="submit" id="generateButton">Подтвердить карточку и сформировать DOCX</button>
+                </div>
+              </form>
+            </section>
+          {% endif %}
+
+          {% if summary %}
+            <section class="result-panel">
+              <div class="review-head">
+                <div>
+                  <h2>Результат проверки и DOCX</h2>
+                  <p>Документ сформирован. Скачивание доступно, если автоматический контроль не нашел критических ошибок.</p>
+                </div>
+                <div class="readiness-badge">{{ review.readiness_percent if review else 95 }}%</div>
+              </div>
+
+              {% if review and review.checklist %}
+                <div class="readiness-panel">
+                  {% for item in review.checklist %}
+                    <div class="readiness-item {{ item.status }}">
+                      <strong>{{ item.title }}</strong>
+                      <span>{{ item.note }}</span>
+                      <b>{{ item.score }}/{{ item.max_score }}</b>
+                    </div>
+                  {% endfor %}
+                </div>
+              {% endif %}
+
+              {% if review and review.blockers %}
+                <div class="alert inline-alert">
+                  <strong>Скачивание заблокировано до исправления:</strong>
+                  <ul>
+                    {% for item in review.blockers %}
+                      <li>{{ item.note }}</li>
+                    {% endfor %}
+                  </ul>
+                </div>
+              {% endif %}
+
+              <dl>
+                <div><dt>Дело</dt><dd>{{ summary.case_id }}</dd></div>
+                <div><dt>Данных достаточно</dt><dd>{{ 'Да' if summary.enough_for_claim else 'Требуется проверка' }}</dd></div>
+                <div><dt>Госпошлина</dt><dd>{{ summary.state_duty_rub }} руб.</dd></div>
+                <div><dt>Суд</dt><dd>{{ summary.court.name if summary.court else 'Не определен автоматически' }}</dd></div>
+              </dl>
+
+              {% if summary.missing %}
+                <h3>Что нужно дополнить</h3>
+                <ul>
+                  {% for item in summary.missing %}
+                    <li>{{ item }}</li>
+                  {% endfor %}
+                </ul>
+              {% endif %}
+
+              <div class="result-actions">
+                {% if not review or review.can_download %}
+                  <a class="primary-button" href="/cases/{{ summary.case_id }}/download">Скачать проект иска</a>
+                {% else %}
+                  <button class="secondary-button" type="button" disabled>Скачивание заблокировано проверкой</button>
+                  <a class="ghost-button" href="/cases/{{ summary.case_id }}">Исправить карточку и пересформировать</a>
+                {% endif %}
+              </div>
+
+              <form class="feedback-form" method="post" action="/cases/{{ summary.case_id }}/feedback">
+                <label class="field-label" for="feedback">Комментарий юриста для обучения</label>
+                <textarea id="feedback" name="feedback" placeholder="Что исправить в анализе или тексте иска?"></textarea>
+                <div class="feedback-actions">
+                  <button class="secondary-button" name="accepted" value="false">Нужно исправить</button>
+                  <button class="primary-button" name="accepted" value="true">Результат принят</button>
+                </div>
+              </form>
+            </section>
+          {% endif %}
+        </section>
+      </main>
+
+      <aside class="statusbar">
+        <section>
+          <h2>Готовность</h2>
+          <div class="status-item">
+            <span>OpenAI API</span>
+            <b class="{{ 'ok' if env.openai_configured else 'warn' }}">{{ 'ключ задан' if env.openai_configured else 'нужен OPENAI_API_KEY' }}</b>
+          </div>
+          <div class="status-item">
+            <span>Tesseract OCR</span>
+            <b class="{{ 'ok' if env.tesseract_configured else 'warn' }}">{{ 'путь задан' if env.tesseract_configured else 'путь не задан' }}</b>
+          </div>
+          <div class="status-item">
+            <span>OCR сканов</span>
+            <b class="{{ 'ok' if env.ocr_enabled else 'warn' }}">{{ 'включен' if env.ocr_enabled else 'отключен' }}</b>
+          </div>
+          <div class="status-item"><span>Timeout OpenAI</span><b>{{ env.openai_timeout_seconds }} сек.</b></div>
+          <div class="status-item"><span>Timeout OCR</span><b>{{ env.ocr_timeout_seconds }} сек. на страницу</b></div>
+          <div class="status-item">
+            <span>Rusprofile</span>
+            <b class="{{ 'ok' if env.rusprofile_enabled else 'warn' }}">{{ 'включен' if env.rusprofile_enabled else 'отключен' }}</b>
+          </div>
+        </section>
+
+        <section>
+          <h2>Сводка</h2>
+          <dl class="summary-list">
+            <div><dt>Готовность</dt><dd>{{ review.readiness_percent if review else 0 }}%</dd></div>
+            <div><dt>Тип спора</dt><dd>{{ analysis.claim_type if analysis else 'ожидает документы' }}</dd></div>
+            <div><dt>Истец</dt><dd>{{ analysis.claimant.name if analysis and analysis.claimant else '—' }}</dd></div>
+            <div><dt>Ответчик</dt><dd>{{ analysis.defendant.name if analysis and analysis.defendant else '—' }}</dd></div>
+            <div><dt>Цена иска</dt><dd>{{ analysis.amounts.total if analysis and analysis.amounts else '—' }}</dd></div>
+          </dl>
+        </section>
+
+      </aside>
+    </div>
+
+    <dialog id="howDialog">
+      <h2>Как это работает</h2>
+      <p>Программа не сразу пишет иск. Сначала она распознает документы и собирает карточку дела, затем вы проверяете стороны, модель требований, суммы и комплект документов. После подтверждения формируется DOCX и запускается автоматический контроль текста.</p>
+      <button class="primary-button" id="closeDialog">Понятно</button>
+    </dialog>
+
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+  </body>
+</html>

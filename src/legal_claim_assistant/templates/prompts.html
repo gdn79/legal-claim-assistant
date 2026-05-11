@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Редактор промптов</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+  </head>
+  <body>
+    <div class="app-shell prompt-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark">§</div>
+          <div>
+            <div class="brand-title">Правовой бот</div>
+            <div class="brand-subtitle">настройка ИИ</div>
+          </div>
+        </div>
+        <nav class="steps" aria-label="Разделы">
+          <a class="step" href="/bot">
+            <span class="step-number">1</span>
+            <span><strong>Бот</strong><small>Загрузка документов</small></span>
+          </a>
+          <a class="step active" href="/prompts">
+            <span class="step-number">2</span>
+            <span><strong>Промпты</strong><small>Редактирование ИИ</small></span>
+          </a>
+        </nav>
+        <div class="help-box">
+          <strong>Где хранится</strong>
+          <span>Изменения сохраняются в data/prompts.json. Исходные значения остаются в prompts.py.</span>
+        </div>
+      </aside>
+
+      <main class="workspace prompt-workspace">
+        <header class="topbar">
+          <div>
+            <h1>Редактор промптов</h1>
+            <p>Настройте анализ документов и стиль искового заявления. Следующая обработка будет использовать сохраненный текст.</p>
+          </div>
+          <a class="ghost-button" href="/bot">Вернуться к боту</a>
+        </header>
+
+        {% if saved %}
+          <div class="success" role="status">Промпты сохранены.</div>
+        {% endif %}
+        {% if reset %}
+          <div class="success" role="status">Промпты сброшены к значениям из prompts.py.</div>
+        {% endif %}
+        {% if errors %}
+          <div class="alert" role="alert">
+            <strong>Промпты не сохранены.</strong>
+            <ul>
+              {% for item in errors %}
+                <li>{{ item }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+        {% endif %}
+
+        <form class="prompt-form" method="post" action="/prompts">
+          {% for key, label in fields.items() %}
+            <section class="prompt-editor">
+              <div class="prompt-editor-head">
+                <div>
+                  <h2>{{ label }}</h2>
+                  {% if key == "analysis_user" %}
+                    <p>Оставьте маркер <code>{documents}</code>: туда подставляется текст файлов.</p>
+                  {% elif key == "claim_user" %}
+                    <p>Оставьте маркеры <code>{analysis}</code>, <code>{court}</code>, <code>{state_duty_rub}</code>.</p>
+                  {% else %}
+                    <p>Системная роль и правила поведения модели.</p>
+                  {% endif %}
+                </div>
+                <span>{{ prompts[key]|length }} знаков</span>
+              </div>
+              <textarea class="prompt-textarea" name="{{ key }}" spellcheck="false">{{ prompts[key] }}</textarea>
+            </section>
+          {% endfor %}
+
+          <div class="prompt-actions">
+            <button class="primary-button" type="submit">Сохранить промпты</button>
+          </div>
+        </form>
+
+        <form class="prompt-reset" method="post" action="/prompts/reset">
+          <button class="secondary-button" type="submit">Сбросить к исходным</button>
+        </form>
+      </main>
+    </div>
+  </body>
+</html>

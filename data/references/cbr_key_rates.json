@@ -1,0 +1,10 @@
+[
+  {"date": "2025-06-09", "rate": "20.00", "source": "Bank of Russia key rate decision 06.06.2025"},
+  {"date": "2025-07-28", "rate": "18.00", "source": "Bank of Russia key rate decision 25.07.2025"},
+  {"date": "2025-09-15", "rate": "17.00", "source": "Bank of Russia key rate decision 12.09.2025"},
+  {"date": "2025-10-27", "rate": "16.50", "source": "Bank of Russia key rate decision 24.10.2025"},
+  {"date": "2025-12-22", "rate": "16.00", "source": "Bank of Russia key rate decision 19.12.2025"},
+  {"date": "2026-02-16", "rate": "15.50", "source": "Bank of Russia key rate decision 13.02.2026"},
+  {"date": "2026-03-23", "rate": "15.00", "source": "Bank of Russia key rate decision 20.03.2026"},
+  {"date": "2026-04-27", "rate": "14.50", "source": "Bank of Russia key rate decision 24.04.2026"}
+]
