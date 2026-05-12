@@ -71,7 +71,6 @@ class OpenAiLegalAnalyzer:
                     {"role": "system", "content": system},
                     {"role": "user", "content": user},
                 ],
-                max_tokens=8000,
             )
         except APIStatusError as exc:
             if exc.status_code == 404:

@@ -1,0 +1,16 @@
+services:
+  assistant:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: legal-claim-assistant
+    restart: unless-stopped
+    ports:
+      - "9000:8000"
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    env_file:
+      - .env
+    environment:
+      - PYTHONUNBUFFERED=1
